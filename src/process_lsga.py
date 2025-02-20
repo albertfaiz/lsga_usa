@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 """
-Process Livestock GeoTIFFs and County Shapefile Data on HPC
-This script creates a grid of points within each county, samples the given
-GeoTIFF files for livestock data, computes average values per county,
+Process Livestock GeoTIFFs and County Shapefile Data
+
+This script creates a grid of points within each county (from the county shapefile),
+samples the given GeoTIFF files for various livestock data, computes average values per county,
 and saves the results to a CSV file.
 """
 
@@ -36,10 +37,9 @@ def create_grid_points_within_polygon(polygon, spacing):
 # ------------------------------------------------------------------------------
 def average_raster_over_county(tif_file, county_polygon, county_crs, spacing=None, is_density=False):
     """
-    For a given GeoTIFF file and county polygon, create grid points within
-    the polygon, sample the raster at those points, and return the average
-    value. If the data represent density (e.g., 2020 data), it converts the
-    values to counts using an approximate pixel area conversion.
+    For a given GeoTIFF file and county polygon, sample the raster at grid points within
+    the polygon and return the average value. If the data represent density (e.g., 2020),
+    convert the values to counts using an approximate pixel area conversion.
     """
     with rasterio.open(tif_file) as src:
         raster_crs = src.crs
@@ -71,17 +71,17 @@ def average_raster_over_county(tif_file, county_polygon, county_crs, spacing=Non
             transform = src.transform
             pixel_width = abs(transform[0])
             pixel_height = abs(transform[4])
-            # Convert pixel dimensions to approximate km (1 degree ≈ 111 km)
+            # Approximate conversion: 1 degree ≈ 111 km.
             pixel_area_sqkm = (pixel_width * 111) * (pixel_height * 111)
             sampled_vals = sampled_vals * pixel_area_sqkm
 
         return np.nanmean(sampled_vals)
 
 # ------------------------------------------------------------------------------
-# 3. Define the Livestock GeoTIFF Files (Update HPC Paths)
+# 3. Define the Livestock GeoTIFF Files (Relative Paths)
 # ------------------------------------------------------------------------------
-# Adjust these paths to where your data are stored on HPC.
-data_dir = "/home/fxa230012/hpc/euler/data"
+# Use a relative path so the script works both locally and on HPC.
+data_dir = "./data"
 tif_files = {
     'Buffalo': {
         2010: f"{data_dir}/5_Bf_2010_Da.tif",
@@ -151,8 +151,8 @@ for livestock_type, years_dict in tif_files.items():
         )
 
 # ------------------------------------------------------------------------------
-# 6. Save the Final DataFrame to CSV
+# 6. Save the Final County-Level Averages to CSV
 # ------------------------------------------------------------------------------
-output_csv = "/home/fxa230012/hpc/euler/county_average_livestock.csv"
+output_csv = "./county_average_livestock.csv"
 df_counties.to_csv(output_csv, index=False)
 print(f"\nCounty-level averages saved to {output_csv}")
